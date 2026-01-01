@@ -22,4 +22,13 @@ The application supports accurate pre-planning, reducing on-site adjustments and
 Office-based staff responsible for ordering materials based on missing elements.  
 The system allows them to quickly calculate **how many commercial-length bars (e.g. 6 m stock lengths)** must be ordered from suppliers, eliminating guesswork and over-ordering.
 
+## ☕ Support the Project
+
+If this tool helps you reduce material waste or saves you time,
+consider supporting its development.
+
+[//]: < - ❤️ GitHub Sponsors: https://github.com/sponsors/yourname>
+- ☕ Buy me a coffee: [https://buymeacoffee.com/yourname](https://buymeacoffee.com/krusher)
+
+Every contribution helps improve the project and add new features.
 
