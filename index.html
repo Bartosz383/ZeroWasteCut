@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kalkulator Cięcia - Edycja Bazy</title>
+    
+    <link rel="stylesheet" href="style.css">
+</head>
+<body onload="initApp()">
+
+    <div id="menu-container" class="container" style="text-align: center; padding: 50px 20px;">
+        <h1>🪚 System Cięcia Profili</h1>
+        <p>Pełne zarządzanie bazą materiałową.</p>
+        <br>
+        <button class="nav-button" onclick="showCalculator()">Otwórz Kalkulator</button>
+        <button class="nav-button" onclick="showOptimizer()" style="background-color: #27ae60;">Optymalizacja Rozkroju</button>
+    </div>
+
+    <div id="calculator-container" class="container" style="display:none;">
+        <a class="back-link" onclick="showMenu()">← Wróć do menu</a>
+        
+        <label>Wybierz profil z bazy:</label>
+        <select id="profile-db" onchange="applyProfile()">
+            <option value="custom">-- Własne wymiary --</option>
+        </select>
+
+        <div class="input-group" style="margin-top:15px;">
+            <div>
+                <label>Długość L (mm)</label>
+                <input type="number" id="L" placeholder="np. 6000" inputmode="decimal">
+            </div>
+            <div>
+                <label>Grubość piły S (mm)</label>
+                <input type="number" id="S" value="3" inputmode="decimal">
+            </div>
+            <div>
+                <label>Masa (kg/m)</label>
+                <input type="number" id="M" value="0" readonly style="background: #f0f0f0;">
+            </div>
+        </div>
+
+        <label>Lista odcinków (oddzielone przecinkami)</label>
+        <input type="text" id="fragments" placeholder="np. 1200, 800, 500">
+
+        <button class="calc-button" onclick="calculateZ()" style="background-color: #007bff;">OBLICZ I ZAPISZ</button>
+
+        <div id="viz-container" style="display:none;">
+            <canvas id="cutCanvas" width="800" height="150"></canvas>
+        </div>
+
+        <div id="result-area" class="container" style="display:none; border-left: 6px solid #007bff; background: #f8f9fa;">
+            <span id="result-text"></span>
+        </div>
+
+        <div style="margin-top: 30px; margin-bottom: 30px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h3>Historia pomiarów</h3>
+                <button class="export-button" onclick="exportToText()" style="width:auto; padding: 8px 15px; font-size: 13px;">💾 Pobierz .txt</button>
+            </div>
+            <div class="table-wrapper">
+                <table id="history-table">
+                    <thead>
+                        <tr>
+                            <th>L (mm)</th>
+                            <th>Cięcia</th>
+                            <th>Z (odpad)</th>
+                            <th>Status</th>
+                            <th>Akcja</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="container" style="background: #fdfdfd; border: 1px dashed #ccc;">
+            <h3>📋 Edytuj Bazę Profili</h3>
+            <div class="table-wrapper" style="margin-bottom: 20px;">
+                <table id="profiles-table">
+                    <thead>
+                        <tr>
+                            <th>Nazwa</th>
+                            <th>L (mm)</th>
+                            <th>Piła (mm)</th>
+                            <th>Masa (kg/m)</th>
+                            <th>Akcje</th>
+                        </tr>
+                    </thead>
+                    <tbody id="profiles-body"></tbody>
+                </table>
+            </div>
+            
+            <h4>➕ Dodaj nowy profil</h4>
+            <div class="input-group">
+                <input type="text" id="new-name" placeholder="Nazwa">
+                <input type="number" id="new-L" placeholder="Długość L">
+                <input type="number" id="new-S" placeholder="Grubość piły">
+                <input type="number" id="new-M" placeholder="Masa kg/m">
+            </div>
+            <button class="add-button" onclick="addNewProfile()">Dodaj do bazy</button>
+        </div>
+    </div>
+
+    <div id="optimizer-container" class="container" style="display:none;">
+        <a class="back-link" onclick="showMenu()">← Wróć do menu</a>
+        <h3>📐 Optymalizacja Rozkroju (Nesting)</h3>
+        <p><small>Wprowadź listę wszystkich potrzebnych odcinków, a system obliczy ile sztang potrzebujesz.</small></p>
+
+        <div class="input-group">
+            <div>
+                <label>Długość handlowa L (mm)</label>
+                <input type="number" id="opt-L" value="6000">
+            </div>
+            <div>
+                <label>Grubość piły S (mm)</label>
+                <input type="number" id="opt-S" value="3">
+            </div>
+        </div>
+
+        <label>Wszystkie potrzebne odcinki</label>
+        <textarea id="opt-fragments" style="width:100%; height:100px;" placeholder="Wpisz wymiary..."></textarea>
+
+        <button class="calc-button" onclick="runOptimization()" style="background-color: #27ae60;">GENERUJ ROZKRÓJ</button>
+
+        <div id="opt-results" style="margin-top:20px;"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
