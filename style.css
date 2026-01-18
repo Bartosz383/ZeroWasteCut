@@ -158,3 +158,103 @@
         font-weight: bold;
         color: #2c3e50;
     }
+
+    /* Definicje kolorów dla trybu ciemnego */
+body.dark-mode {
+    background-color: #1a1a1a;
+    color: #e0e0e0;
+}
+
+.dark-mode .container {
+    background: #2d2d2d;
+    color: #e0e0e0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+
+.dark-mode input, .dark-mode select, .dark-mode textarea {
+    background-color: #3d3d3d;
+    border-color: #555;
+    color: #fff;
+}
+
+.dark-mode #M, .dark-mode .result-card {
+    background: #3d3d3d !important;
+    border-color: #444;
+}
+
+.dark-mode table th {
+    background-color: #3d3d3d;
+    color: #fff;
+}
+
+.dark-mode td {
+    border-bottom: 1px solid #444;
+}
+
+.dark-mode .result-value {
+    color: #3498db;
+}
+
+.dark-mode #viz-container {
+    background: #252525;
+    border-color: #444;
+}
+
+/* Styl dla paska optymalizacji w trybie ciemnym */
+.dark-mode div[style*="background:#fdfdfd"] {
+    background: #333 !important;
+    border-color: #444 !important;
+}
+/* --- Style domyślne (Jasne) --- */
+#opt-main-box { background: #fdfdfd; border: 1px dashed #ccc; }
+#opt-stock-box { background: #eef2f7; border: 1px solid #d1d9e6; }
+.btn-generate { background-color: #27ae60; color: white; }
+.summary-bar { 
+    display: flex; justify-content: space-between; align-items: center; 
+    background: #2c3e50; color: white; padding: 15px; border-radius: 8px; 
+}
+.btn-copy { background: #34495e; color: white; border: none; padding: 8px; cursor: pointer; }
+
+/* --- Style dla Trybu Ciemnego --- */
+.dark-mode #opt-main-box { 
+    background: #252525 !important; 
+    border-color: #444 !important; 
+}
+
+.dark-mode #opt-stock-box { 
+    background: #333 !important; 
+    border-color: #555 !important; 
+}
+
+.dark-mode .summary-bar { 
+    background: #1a1a1a !important; 
+    border: 1px solid #444; 
+}
+
+.dark-mode .btn-copy { 
+    background: #444 !important; 
+}
+
+.dark-mode .btn-generate {
+    background-color: #219150 !important; /* Nieco ciemniejszy zielony */
+}
+
+/* Naprawa niedziałającego trybu ciemnego dla konkretnych boxów */
+.dark-mode #opt-stock-box, 
+.dark-mode #opt-main-box,
+.dark-mode .container {
+    background: #2d2d2d !important;
+    border-color: #444 !important;
+    color: #e0e0e0 !important;
+}
+
+.dark-mode .summary-bar {
+    background: #1a1a1a !important;
+    border: 1px solid #444;
+}
+
+.dark-mode textarea, .dark-mode input {
+    background-color: #3d3d3d !important;
+    color: #fff !important;
+    border: 1px solid #555 !important;
+}

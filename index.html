@@ -7,7 +7,14 @@
     
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body onload="initApp()">
+
+    <div style="text-align: right; margin-bottom: 10px;">
+    <button onclick="toggleDarkMode()" id="dark-mode-toggle" class="btn-action" style="background: #34495e; padding: 10px 15px;">
+        🌙 Tryb Ciemny
+    </button>
+</div>
 
     <div id="menu-container" class="container" style="text-align: center; padding: 50px 20px;">
         <h1>🪚 System Cięcia Profili</h1>
@@ -116,6 +123,18 @@
                 <label>Grubość piły S (mm)</label>
                 <input type="number" id="opt-S" value="3">
             </div>
+            <div>
+                <label>Naddatek na wyrównanie (mm)</label>
+                <input type="number" id="opt-trim" value="10">
+            </div>
+            <div>
+                <label>Cena za metr (PLN)</label>
+                <input type="number" id="opt-price" value="0" step="0.01">
+            </div>
+            <div class="container" style="background: #eef2f7; border: 1px solid #d1d9e6;">
+                <label>🗄️ Posiadane końcówki w magazynie</label>
+                <textarea id="opt-stock" style="width:100%; height:60px;" placeholder="np. 2x2400, 1850 (zostaną użyte w pierwszej kolejności)"></textarea>
+            </div>
         </div>
 
         <label>Wszystkie potrzebne odcinki</label>
@@ -123,6 +142,12 @@
 
         <button class="calc-button" onclick="runOptimization()" style="background-color: #27ae60;">GENERUJ ROZKRÓJ</button>
 
+        <div id="opt-summary" style="margin-top:20px; display:none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; background: #2c3e50; color: white; padding: 15px; border-radius: 8px;">
+            <div id="cost-display">Koszt całkowity: 0.00 PLN</div>
+            <button onclick="copyToClipboard()" class="export-button" style="width:auto; margin:0; background:#34495e;">📋 Kopiuj listę cięć</button>
+        </div>
+        </div>
         <div id="opt-results" style="margin-top:20px;"></div>
     </div>
 

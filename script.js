@@ -1,6 +1,7 @@
 let historyData = [];
 let profiles = [];
 let editingIndex = -1;
+let lastOptimizationText = ""; // Globalna zmienna na potrzeby kopiowania
 
 function initApp() {
     loadProfiles();
@@ -10,61 +11,201 @@ function initApp() {
 // Nawigacja
 function showOptimizer() { 
     document.getElementById("menu-container").style.display = "none"; 
+    document.getElementById("calculator-container").style.display = "none"; 
     document.getElementById("optimizer-container").style.display = "block"; 
+}
+
+function showCalculator() { 
+    document.getElementById("menu-container").style.display = "none"; 
+    document.getElementById("optimizer-container").style.display = "none"; 
+    document.getElementById("calculator-container").style.display = "block"; 
+}
+
+function showMenu() { 
+    document.getElementById("menu-container").style.display = "block"; 
+    document.getElementById("calculator-container").style.display = "none"; 
+    document.getElementById("optimizer-container").style.display = "none"; 
 }
 
 // Główny algorytm rozkroju
 function runOptimization() {
     const L = parseFloat(document.getElementById("opt-L").value);
     const S = parseFloat(document.getElementById("opt-S").value);
-    const rawInput = document.getElementById("opt-fragments").value;
+    const trim = parseFloat(document.getElementById("opt-trim").value) || 0;
+    const pricePerM = parseFloat(document.getElementById("opt-price").value) || 0;
     
-    // Przetwarzanie wejścia (obsługuje przecinki, spacje i nową linię)
-    let fragments = rawInput.split(/[\s,]+/).map(x => parseFloat(x)).filter(x => !isNaN(x));
+    // 1. Parsowanie potrzebnych odcinków
+    let fragments = parseInput(document.getElementById("opt-fragments").value);
+    
+    // 2. Parsowanie zasobów magazynowych (NOWOŚĆ)
+    let availableStock = parseInput(document.getElementById("opt-stock").value);
+    // Sortujemy magazyn od najkrótszych, by nie marnować długich resztek na małe detale
+    availableStock.sort((a, b) => a - b); 
 
-    if (isNaN(L) || fragments.length === 0) { alert("Podaj poprawne dane!"); return; }
-    if (fragments.some(f => f > L)) { alert("Jeden z odcinków jest dłuższy niż sztanga!"); return; }
-
-    // Sortowanie malejąco (klucz do algorytmu First Fit Decreasing)
+    if (isNaN(L) || fragments.length === 0) { alert("Podaj dane!"); return; }
+    
+    // Sortowanie potrzebnych elementów malejąco
     fragments.sort((a, b) => b - a);
 
-    let stockUnits = []; // Tablica sztang
+    let usedStockUnits = []; // Tu trafią wykorzystane resztki z magazynu
+    let newFullUnits = [];   // Tu trafią nowe pełne sztangi L
 
     fragments.forEach(frag => {
         let placed = false;
-        // Szukaj sztangi, w której zmieści się fragment + rzaz
-        for (let unit of stockUnits) {
-            let usedSpace = unit.reduce((a, b) => a + b, 0) + (unit.length * S);
-            if (usedSpace + frag <= L) {
+
+        // KROK A: Szukaj w już "otwartych" jednostkach (najpierw resztki, potem nowe)
+        let allUnits = [...usedStockUnits, ...newFullUnits];
+        for (let unit of allUnits) {
+            let limit = unit.isFromStock ? unit.initialL : L;
+            // Sprawdzamy wolne miejsce uwzględniając trim tylko dla nowych sztang
+            let currentTrim = unit.isFromStock ? 0 : trim; 
+            let usedSpace = currentTrim + unit.reduce((a, b) => a + b, 0) + (unit.length * S);
+            
+            if (usedSpace + frag <= limit) {
                 unit.push(frag);
                 placed = true;
                 break;
             }
         }
-        // Jeśli się nie zmieścił, weź nową sztangę
+
+        // KROK B: Jeśli się nie zmieścił, spróbuj "pobrać" nową końcówkę z magazynu
         if (!placed) {
-            stockUnits.push([frag]);
+            for (let i = 0; i < availableStock.length; i++) {
+                if (frag <= availableStock[i]) {
+                    let newStockUnit = [frag];
+                    newStockUnit.isFromStock = true;
+                    newStockUnit.initialL = availableStock[i];
+                    usedStockUnits.push(newStockUnit);
+                    availableStock.splice(i, 1); // Usuwamy z dostępnych
+                    placed = true;
+                    break;
+                }
+            }
+        }
+
+        // KROK C: Ostatecznie weź nową pełną sztangę L
+        if (!placed) {
+            let newUnit = [frag];
+            newUnit.isFromStock = false;
+            newUnit.initialL = L;
+            newFullUnits.push(newUnit);
         }
     });
 
-    displayOptResults(stockUnits, L, S);
+    renderFinalResults(usedStockUnits, newFullUnits, L, S, trim, pricePerM);
 }
 
-function displayOptResults(units, L, S) {
+// Pomocnicza funkcja do parsowania (obsługuje AxB)
+function parseInput(text) {
+    let result = [];
+    text.split(/[\s,\n]+/).forEach(p => {
+        if (!p) return;
+        if (p.includes('x') || p.includes('*')) {
+            const [qty, len] = p.split(/[x*]/).map(Number);
+            if (!isNaN(qty) && !isNaN(len)) for(let i=0; i<qty; i++) result.push(len);
+        } else {
+            const val = parseFloat(p);
+            if (!isNaN(val)) result.push(val);
+        }
+    });
+    return result;
+}
+
+function copyToClipboard() {
+    if (!lastOptimizationText) return;
+    navigator.clipboard.writeText(lastOptimizationText).then(() => {
+        alert("Lista cięć została skopiowana do schowka!");
+    });
+}
+
+function renderFinalResults(usedStock, newUnits, L, S, trim, price) {
+    const resDiv = document.getElementById("opt-results");
+    const totalNewL = newUnits.length * L;
+    const cost = (totalNewL / 1000) * price;
+    
+    let html = `<div style="padding:10px; background:#d4edda; margin-bottom:10px; border-radius:5px;">
+                    Wykorzystano <b>${usedStock.length}</b> końcówek z magazynu i <b>${newUnits.length}</b> nowych sztang.
+                </div>`;
+
+    // Wyświetlanie najpierw jednostek z magazynu
+    [...usedStock, ...newUnits].forEach((unit, i) => {
+        const isStock = unit.isFromStock;
+        const currentL = isStock ? unit.initialL : L;
+        const currentTrim = isStock ? 0 : trim;
+        const waste = currentL - unit.reduce((a,b)=>a+b,0) - (unit.length*S) - currentTrim;
+
+        html += `
+            <div style="border:1px solid ${isStock ? '#3498db' : '#ccc'}; padding:10px; margin-bottom:5px; border-radius:8px;">
+                <small>${isStock ? '📦 MAGAZYN: ' + currentL + 'mm' : '🆕 NOWA SZTANGA: ' + L + 'mm'}</small>
+                <div style="display:flex; height:20px; background:#eee; margin-top:5px;">
+                    ${!isStock ? `<div style="width:${(trim/L)*100}%; background:#95a5a6;"></div>` : ''}
+                    ${unit.map(f => `<div style="width:${(f/currentL)*100}%; background:${isStock ? '#5dade2' : '#3498db'}; border-right:1px solid white;"></div>`).join('')}
+                    <div style="flex-grow:1; background:#e67e22;"></div>
+                </div>
+            </div>
+        `;
+    });
+
+    document.getElementById("cost-display").innerHTML = `Koszt nowych sztang: <b>${cost.toFixed(2)} PLN</b>`;
+    resDiv.innerHTML = html;
+}
+
+function displayOptResults(units, L, S, trim) {
     const resDiv = document.getElementById("opt-results");
     let html = `<h4>Wynik: Potrzeba ${units.length} sztang</h4>`;
     
     units.forEach((unit, index) => {
         const sum = unit.reduce((a, b) => a + b, 0);
         const cuts = unit.length * S;
-        const waste = L - sum - cuts;
+        const waste = L - sum - cuts - trim;
         
         html += `
             <div style="border:1px solid #ddd; padding:15px; border-radius:8px; margin-bottom:10px; background:#fdfdfd">
-                <strong>Sztanga #${index + 1}</strong>: ${unit.join(" mm, ")} mm 
-                <br><small style="color:#666">Suma: ${sum} mm | Odpad: <b>${waste.toFixed(1)} mm</b></small>
-                <div style="display:flex; height:20px; background:#eee; margin-top:8px; border-radius:4px; overflow:hidden;">
-                    ${unit.map(f => `<div style="width:${(f/L)*100}%; background:#3498db; border-right:1px solid white;"></div>`).join('')}
+                <div style="display:flex; justify-content:space-between;">
+                    <strong>Sztanga #${index + 1}</strong>
+                    <span>Zużycie: ${(((L-waste)/L)*100).toFixed(1)}%</span>
+                </div>
+                <small style="color:#666">Cięcia: ${unit.join(", ")} mm</small>
+                <br><small style="color:#666">Odpad końcowy: <b>${waste.toFixed(1)} mm</b> (w tym ${trim}mm wyrównania)</small>
+                
+                <div style="display:flex; height:24px; background:#eee; margin-top:8px; border-radius:4px; overflow:hidden; border:1px solid #ccc;">
+                    <div style="width:${(trim/L)*100}%; background:#95a5a6; border-right:1px solid #7f8c8d;" title="Wyrównanie"></div>
+                    
+                    ${unit.map(f => `
+                        <div style="width:${(f/L)*100}%; background:#3498db; border-right:2px solid #e74c3c; display:flex; align-items:center; justify-content:center; color:white; font-size:10px; font-weight:bold;">
+                            ${f}
+                        </div>`).join('')}
+                    
+                    ${waste > 0 ? `<div style="width:${(waste/L)*100}%; background:#e67e22;"></div>` : ''}
+                </div>
+            </div>
+        `;
+    });
+    
+    resDiv.innerHTML = html;
+}
+
+function displayOptResults(units, L, S, trim) {
+    const resDiv = document.getElementById("opt-results");
+    let html = `<h4>Wynik: Potrzeba ${units.length} sztang</h4>`;
+    
+    units.forEach((unit, index) => {
+        const sumFrags = unit.reduce((a, b) => a + b, 0);
+        const cuts = unit.length * S;
+        const waste = L - sumFrags - cuts - trim; // Odejmujemy naddatek od wolnego miejsca
+        
+        html += `
+            <div style="border:1px solid #ddd; padding:15px; border-radius:8px; margin-bottom:10px; background:#fdfdfd">
+                <strong>Sztanga #${index + 1}</strong> (Wyrównanie: ${trim}mm): ${unit.join(" | ")} mm 
+                <br><small style="color:#666">Czysty odpad: <b>${waste.toFixed(1)} mm</b></small>
+                <div style="display:flex; height:24px; background:#eee; margin-top:8px; border-radius:4px; overflow:hidden; border:1px solid #ccc;">
+                    <div style="width:${(trim/L)*100}%; background:#95a5a6; border-right:1px solid white;" title="Wyrównanie"></div>
+                    
+                    ${unit.map(f => `
+                        <div style="width:${(f/L)*100}%; background:#3498db; border-right:2px solid #e74c3c; display:flex; align-items:center; justify-content:center; color:white; font-size:9px;">
+                            ${f}
+                        </div>`).join('')}
+                    
                     ${waste > 0 ? `<div style="width:${(waste/L)*100}%; background:#e67e22;"></div>` : ''}
                 </div>
             </div>
@@ -321,6 +462,30 @@ function drawCuts(L, S, fragments, Z) {
         ctx.fillRect(currentX, 60, Z * scale, 50);
     }
     ctx.strokeRect(margin, 60, width, 50);
+}
+
+function toggleDarkMode() {
+    const isDark = document.body.classList.toggle('dark-mode');
+    localStorage.setItem('darkMode', isDark);
+    
+    const btn = document.getElementById('dark-mode-toggle');
+    btn.textContent = isDark ? '☀️ Tryb Jasny' : '🌙 Tryb Ciemny';
+    
+    // Odśwież rysunek na canvasie, jeśli istnieje
+    if (document.getElementById("viz-container").style.display !== "none") {
+        calculateZ(); 
+    }
+}
+
+// Wywołaj to w funkcji initApp()
+function initApp() {
+    loadProfiles();
+    loadHistory();
+    
+    if (localStorage.getItem('darkMode') === 'true') {
+        document.body.classList.add('dark-mode');
+        document.getElementById('dark-mode-toggle').textContent = '☀️ Tryb Jasny';
+    }
 }
 
 function showCalculator() { document.getElementById("menu-container").style.display = "none"; document.getElementById("calculator-container").style.display = "block"; }
